@@ -142,17 +142,17 @@ copy_files()
 confirm()
 {
 	DSC=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
-    read -p "$DEV ($DSC) is going to be formated. Do you want to continue? (Y/N)" YN
-    if [[ "$YN" == [Yy] ]]
-    then
-    	true
-    elif [[ "$YN" == [Nn] ]]
-    then
-    	exit 0
-    else
-    	echo "Please, use 'Y' or 'N'"
-    	confirm
-    fi
+	read -p "$DEV ($DSC) is going to be formated. Do you want to continue? (Y/N)" YN
+	if [[ "$YN" == [Yy] ]]
+	then
+		true
+	elif [[ "$YN" == [Nn] ]]
+	then
+		exit 0
+	else
+		echo "Please, use 'Y' or 'N'"
+		confirm
+	fi
 }
 
 # Go to partitioning stage based on chosen boot method
