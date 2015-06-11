@@ -29,4 +29,7 @@ Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
 
 ## Acknowledgements
 
-bootify is a project by [oneohthree](https://sudo.cubava.cu)
+bootify is a project by oneohthree
+
+* [Blog](https://sudo.cubava.cu)
+* [GitHub](http://oneohthree.github.io/)
