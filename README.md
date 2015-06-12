@@ -13,8 +13,9 @@ Make sure the following tools exist on your system:
 * `mkfs.ntfs`
 * `mkfs.vfat`
 * `parted`
+* `sha1sum`
 * `stat`
-* `7za`
+* `7z`
 
 ## Usage
 

@@ -1,8 +1,9 @@
 #!/bin/bash
 
-VER="0.2"
+VER="0.2.1"
+echo $$
 
-usage()
+function usage()
 {
 cat <<EOF
 Usage: $0 -d [DEVICE] -s [boot|uefi] -i [ISO]
@@ -18,14 +19,74 @@ Options:
 EOF
 }
 
-version()
+function version()
 {
 	echo "bootify $VER"
 }
 
-available_devices()
+function available_devices
 {
 	lsblk -ndo tran,name,vendor,model,size | grep usb | tr -s " "  " "
+}
+
+function mbr_part()
+{
+	BTS="res/bootstrap"
+	parted -s -a optimal $DEV mktable msdos mkpart primary ntfs 1 100% set 1 boot
+	mkfs.ntfs -f -L BOOTIFY ${DEV}1
+	dd if=$BTS of=$DEV > /dev/null 2>&1 || { echo "Error injecting bootstrap" 1>&2; exit 1; }
+	copy_files
+}
+
+function gpt_part()
+{   
+	parted -s -a optimal $DEV mktable gpt mkpart primary fat32 1 100%
+	mkfs.vfat -F32 -n BOOTIFY ${DEV}1
+	copy_files
+}
+
+function confirm()
+{
+	DSC=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
+	read -p "$DSC is going to be formated. Do you want to continue? (Y/N)" YN
+	if [[ "$YN" == [Yy] ]]
+	then
+		true
+	elif [[ "$YN" == [Nn] ]]
+	then
+		exit 0
+	else
+		echo "Please, use 'Y' or 'N'"
+		confirm
+	fi
+}
+
+function copy_files()
+{
+	mount ${DEV}1 /mnt
+	mount -o ro $ISO /media
+	cp -rv /media/* /mnt
+
+	# Windows 7 missing UEFI boot file workaround
+	# This does not happen with Windows 8 installation media
+
+	if [[ "$SCH" == "uefi" ]]
+	then
+		if [[ ! -d /mnt/efi/boot ]]
+		then
+			WIM="/media/sources/install.wim"
+			EFI="1/Windows/Boot/EFI/bootmgfw.efi"
+			DST="/mnt/efi/boot"		
+			7z e $WIM $EFI -o${DST} > /dev/null 2>&1 || { echo 1>&2 "Error extracting bootmgfw.efi"; exit 1; }
+			mv ${DST}/bootmgfw.efi ${DST}/bootx64.efi
+		fi
+	fi
+
+	sync
+	sleep 5
+	umount /mnt /media
+	echo "Your USB drive has been bootified"
+	exit 0
 }
 
 while getopts ":hlvd:s:i:" OPT
@@ -75,17 +136,27 @@ fi
 
 # Check if dependencies are met
 
-DEP="dd isoinfo lsblk mkfs.ntfs mkfs.vfat parted stat 7za"
+DEP="dd isoinfo lsblk mkfs.ntfs mkfs.vfat parted sha1sum stat 7z"
 for D in $DEP
 do
-    type $D > /dev/null 2>&1 || { echo 1>&2 "$D is not ready"; exit 1; }
+    type $D > /dev/null 2>&1 || { echo "$D is not ready" 1>&2; exit 1; }
 done
 
-# Check if bootsect exists
+# Check if bootstrap exists
 
-if [[ ! -f res/bootsect ]]
+SHA=$(sha1sum res/bootstrap | cut -f1 -d " ")
+
+if [[ ! -f res/bootstrap ]]
 then
-	echo "bootsect does not exist" 1>&2
+	echo "bootstrap does not exist" 1>&2
+	exit 1
+fi
+
+# Check bootstrap integrity
+
+if [[ "$SHA" != "9db0cc63f8b6fda3b50ab82e27625c69026a4735" ]]
+then
+	echo "bootstrap file is corrupt" 1>&2
 	exit 1
 fi
 
@@ -105,7 +176,7 @@ then
 	exit 1
 fi
 
-# Check if $DEV is a usb device
+# Check if $DEV is a USB device
 
 if [[ -z $(lsblk -ndo tran $DEV | grep usb) ]]
 then
@@ -147,66 +218,6 @@ if [[ ! -d /media ]]
 then
 	mkdir /media
 fi
-
-mbr_part()
-{
-	parted -s -a optimal $DEV mktable msdos mkpart primary ntfs 1 100% set 1 boot
-	mkfs.ntfs -f -L BOOTIFY ${DEV}1
-	dd if=res/bootsect of=$DEV
-	copy_files
-}
-
-gpt_part()
-{   
-	parted -s -a optimal $DEV mktable gpt mkpart primary fat32 1 100%
-	mkfs.vfat -F32 -n BOOTIFY ${DEV}1
-	copy_files
-}
-
-copy_files()
-{
-	mount ${DEV}1 /mnt
-	mount -o loop $ISO /media
-	# TODO: provide a progress indicator
-	cp -rv /media/* /mnt
-
-	# Windows 7 missing UEFI boot file workaround
-	# This does not happen with Windows 8 installation media
-
-	if [[ "$SCH" == "uefi" ]]
-	then
-		if [[ ! -d /mnt/efi/boot ]]
-		then
-			PWD=pwd
-			mkdir /mnt/efi/boot
-			cd /mnt/efi/boot
-			7z e /media/sources/install.wim 1/Windows/Boot/EFI/bootmgfw.efi 2>&1
-			mv bootmgfw.efi bootx64.efi
-			cd $PWD
-		fi
-	fi
-
-	sync
-	umount /mnt /media
-	echo "Process finished successfully"
-	exit 0
-}
-
-confirm()
-{
-	DSC=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
-	read -p "$DEV ($DSC) is going to be formated. Do you want to continue? (Y/N)" YN
-	if [[ "$YN" == [Yy] ]]
-	then
-		true
-	elif [[ "$YN" == [Nn] ]]
-	then
-		exit 0
-	else
-		echo "Please, use 'Y' or 'N'"
-		confirm
-	fi
-}
 
 # Go to partitioning stage based on chosen boot method
 

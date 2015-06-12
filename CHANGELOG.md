@@ -1,5 +1,10 @@
 == HEAD
 
+== 0.2.1 (June 12,2015)
+
+* Add boostrap file integrity check
+* Some minor changes
+
 == 0.2 (June 10,2015)
  
 * Add check if running as root
