@@ -1,7 +1,7 @@
 # bootify
 
-bootify is a Bash script to make USB drives bootables with Windows 7/8 
-installation files. It can be used for boot or UEFI systems.
+bootify is a Bash script to make bootable USB drives with Windows 7/8 
+installation files. It can be used for Boot or UEFI systems.
 
 ## Dependencies
 
@@ -21,7 +21,7 @@ Make sure the following tools exist on your system:
 
 Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
 
-`sudo ./bootify -d [DEVICE] -s [boot|uefi] -i [ISO]`
+`sudo ./bootify.sh -d [DEVICE] -s [boot|uefi] -i [ISO]`
 
 ## Todo
 
