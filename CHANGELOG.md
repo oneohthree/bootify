@@ -1,11 +1,9 @@
-== HEAD
-
-== 0.2.1 (2015-06-12)
+## 0.2.1 (2015-06-12)
 
 * Add boostrap file integrity check
 * Some minor changes
 
-== 0.2 (2015-06-10)
+## 0.2 (2015-06-10)
  
 * Add check if running as root
 * Add ISO file verification
@@ -16,6 +14,6 @@
 * Improve help
 * Some minor changes
 
-== 0.1 (2015-06-09)
+## 0.1 (2015-06-09)
 
 * First release
