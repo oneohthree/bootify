@@ -27,7 +27,3 @@ Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
 
 * Provide a nice progress indicator
 * Handle interruption events
-
-## Acknowledgements
-
-bootify is a project by [oneohthree](http://oneohthree.github.io/)
