@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# bootify: make bootable USB drives with Windows 7/8 installation files
+# bootify: make bootable USB drives with Windows 7/8/10 installation files
 #
-# Copyright (C) 2015 oneohthree
+# Copyright (C) 2015-2017 oneohthree
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-VER="0.2.1"
+VER="0.2.2"
 
 function usage()
 {
@@ -81,11 +81,12 @@ function confirm()
 function copy_files()
 {
 	mount ${DEV}1 /mnt
-	mount -o ro $ISO /media
-	cp -rv /media/* /mnt
+	#mount -o ro $ISO /media
+	#cp -rv /media/* /mnt
+	7z x $(realpath $ISO) -o/mnt
 
 	# Windows 7 missing UEFI boot file workaround
-	# This does not happen with Windows 8 installation media
+	# This does not happen with Windows 8/10 installation media
 
 	if [[ "$SCH" == "uefi" ]]
 	then
@@ -99,10 +100,11 @@ function copy_files()
 		fi
 	fi
 
-	sync
-	sleep 5
-	umount /mnt /media
-	echo "Your USB drive has been bootified"
+	#sync
+	#sleep 5
+	#umount /mnt /media
+	umount /mnt
+	echo "Your USB drive has been bootified!"
 	exit 0
 }
 
@@ -153,7 +155,7 @@ fi
 
 # Check if dependencies are met
 
-DEP="dd isoinfo lsblk mkfs.ntfs mkfs.vfat parted sha1sum stat 7z"
+DEP="dd rsync file lsblk mkfs.ntfs mkfs.vfat parted sha1sum stat 7z"
 for D in $DEP
 do
     type $D > /dev/null 2>&1 || { echo "$D is not ready" 1>&2; exit 1; }
@@ -205,19 +207,19 @@ fi
 
 if [[ ! -z $(grep $DEV /proc/mounts) ]]
 then
-	echo "$DEV is mounted, dismount it and run bootify again" 1>&2
+	echo "$DEV is mounted, unmount it and run bootify again" 1>&2
 	exit 1
 fi
 
-# Check if $ISO exists and is valid
+# Check if $ISO exists and is bootable
 
 if [[ ! -f "$ISO" ]]
 then
 	echo "$ISO does not exist" 1>&2
 	exit 1
-elif [[ -z $(isoinfo -d -i "$ISO" | grep "CD-ROM is in ISO 9660 format") ]]
+elif [[ -z $(file "$ISO" | grep "bootable") ]]
 then
-	echo "$ISO is not a valid ISO file" 1>&2
+	echo "$ISO is not bootable, you have to use a bootable ISO file" 1>&2
 	exit 1
 fi
 
