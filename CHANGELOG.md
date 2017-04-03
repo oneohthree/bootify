@@ -1,3 +1,9 @@
+## 0.2.2 (2017-04-03)
+
+* Files extracted now with 7z
+* Remove ISO verification
+* Add ISO bootable flag check
+
 ## 0.2.1 (2015-06-12)
 
 * Add boostrap file integrity check
