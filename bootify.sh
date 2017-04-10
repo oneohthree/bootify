@@ -155,7 +155,7 @@ fi
 
 # Check if dependencies are met
 
-DEP="dd rsync file lsblk mkfs.ntfs mkfs.vfat parted sha1sum stat 7z"
+DEP="dd file lsblk mkfs.ntfs mkfs.vfat parted sha1sum stat 7z"
 for D in $DEP
 do
     type $D > /dev/null 2>&1 || { echo "$D is not ready" 1>&2; exit 1; }
