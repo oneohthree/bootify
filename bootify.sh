@@ -152,8 +152,8 @@ partitioning()
 
 copy_files()
 {
-	mkdir /tmp/{src,dst}
-	mount -t iso9660 -o loop $ISO /tmp/src
+	mkdir -p /tmp/{src,dst}
+	mount -o loop $ISO /tmp/src
 	mount ${DEV}1 /tmp/dst
 	cp -rv /tmp/src/* /tmp/dst
 
@@ -161,11 +161,11 @@ copy_files()
 
 	if [[ "$SCH" == "uefi" ]]
 	then
-		if [[ ! -d /mnt/dst/efi/boot ]]
+		if [[ ! -d /tmp/src/efi/boot ]]
 		then
 			WIM="/tmp/src/sources/install.wim"
 			EFI="1/Windows/Boot/EFI/bootmgfw.efi"
-			DST="/mnt/dst/efi/boot"		
+			DST="/tmp/dst/efi/boot"		
 			7z e $WIM $EFI -o${DST} > /dev/null 2>&1 || { echo 1>&2 "Error extracting bootmgfw.efi"; exit 1; }
 			mv ${DST}/bootmgfw.efi ${DST}/bootx64.efi
 		fi
