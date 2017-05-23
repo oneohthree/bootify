@@ -29,5 +29,5 @@ Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
 
 ## Bugs
 
-* Old `lsblk` version have less available columns to report device data.
-* You can't prepare a Windows 7 32bits in UEFI mode. UEFI is supported from Windows 7 64bits onwards.
+* Old `lsblk` versions have less available columns to report device data.
+* You can't use Windows 7 32bits in UEFI mode. UEFI is supported from Windows 7 64bits onwards. If you try to make a USB bootable using Windows 7 32bits it will never work.
