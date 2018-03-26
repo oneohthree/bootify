@@ -30,7 +30,7 @@ usage()
   -h                display this help and exit
   -l                display available USB devices and exit
   -v                display version and exit
-  EOF
+EOF
 }
 
 version()
