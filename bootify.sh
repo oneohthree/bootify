@@ -53,7 +53,7 @@ checks()
   fi
 
   # Check if dependencies are met
-  DEP="dd file stat lsblk parted mkfs.ntfs mkfs.vfat 7z"
+  DEP="dd file stat lsblk parted mkfs.ntfs mkfs.vfat 7z rsync"
   for D in $DEP
   do
     type $D > /dev/null 2>&1 || { echo "ERROR: $D is missing" 1>&2; exit 1; }
@@ -155,7 +155,7 @@ copy_files()
   mkdir -p /tmp/{src,dst}
   mount -o loop "$ISO" /tmp/src
   mount ${DEV}1 /tmp/dst
-  cp -rv /tmp/src/* /tmp/dst
+  rsync -r --info=progress2 /tmp/src/ /tmp/dst/
 
   # Windows 7 missing UEFI boot file workaround
 
