@@ -15,6 +15,7 @@ Make sure the following tools exist on your system:
 * `mkfs.vfat`
 * `parted`
 * `7z`
+* `rsync`
 
 ## Usage
 
