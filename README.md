@@ -25,7 +25,6 @@ Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
 
 ## Todo
 
-* Provide a nice progress indicator
 * Handle interruption events
 
 ## Bugs
