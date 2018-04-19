@@ -1,7 +1,7 @@
 #!/bin/bash
 ## bootify: make bootable USB drives with Windows 7/8/8.1/10 installation files
 #
-# Copyright (C) 2015-2017 oneohthree
+# Copyright (C) 2015-2018 oneohthree
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-VER="0.2.3"
+VER="0.3"
 
-usage()
-{
+usage() {
   cat <<-EOF
   Usage: bootify -d [DEVICE] -s [boot|uefi] -i [ISO]
 
@@ -29,101 +28,75 @@ usage()
   -i [ISO FILE]     path to the ISO file
   -h                display this help and exit
   -l                display available USB devices and exit
-  -v                display version and exit
 EOF
 }
 
-version()
-{
-  echo "bootify $VER"
+error() {
+  echo "$@" 1>&2
+  exit 1
 }
 
-available_devices()
-{
+available_devices() {
   lsblk -ndo tran,name,vendor,model,size | grep usb | tr -s " "  " "
 }
 
-checks()
-{
+checks() {
   # Check parameters
-  if [[ -z "$DEV" ]] || [[ -z "$SCH" ]] || [[ -z "$ISO" ]]
-  then
+  if [[ -z "$DEV" ]] || [[ -z "$SCH" ]] || [[ -z "$ISO" ]]; then
     usage
     exit 1
   fi
 
-  # Check if dependencies are met
-  DEP="dd file stat lsblk parted mkfs.ntfs mkfs.vfat 7z rsync"
-  for D in $DEP
-  do
-    type $D > /dev/null 2>&1 || { echo "ERROR: $D is missing" 1>&2; exit 1; }
+  # Check if bootify runs as root
+  if [[ "$EUID" -ne 0 ]]; then
+    error "ERROR: bootify must be run as root"
+  fi
+
+  # We need these tools
+  tools="dd file stat mktemp lsblk parted mkfs.ntfs mkfs.vfat 7z rsync"
+  for tool in $tools; do
+    type "$tool" > /dev/null 2>&1 || error "ERROR: \"$tool\" is missing"
   done
 
-  # Check if bootstrap exists
-  if [[ ! -f mbr.bin && "$SCH" == "boot" ]]
-  then
-    echo "ERROR: bootstrap file does not exist" 1>&2
-    exit 1
-  fi
-
-  # Check if bootify runs as root
-  if [[ "$EUID" -ne 0 ]]
-  then
-    echo "ERROR: bootify must be run as root" 1>&2
-    exit 1
-  fi
-
   # Check if $DEV is a block device
-  if [[ ! -b "$DEV" ]]
-  then
-    echo "ERROR: $DEV is not a block device" 1>&2
-    exit 1
+  if [[ ! -b "$DEV" ]]; then
+    error "ERROR: \"$DEV\" is not a block device"
   fi
 
   # Check if $DEV is a USB device
-  if [[ -z $(lsblk -ndo tran $DEV | grep usb) ]]
-  then
-    echo "ERROR: $DEV is not a USB device" 1>&2
-    exit 1
+  if [[ -z $(lsblk -ndo tran $DEV | grep usb) ]]; then
+    error "ERROR: \"$DEV\" is not a USB device"
   fi
 
   # Check if $DEV is mounted
-  if [[ ! -z $(grep $DEV /proc/mounts) ]]
-  then
-    echo "ERROR: $DEV is mounted, unmount it and run bootify again" 1>&2
-    exit 1
-  fi
-
-  # Check if $ISO exists and is bootable
-
-  if [[ ! -f "$ISO" ]]
-  then
-    echo "ERROR: $ISO does not exist" 1>&2
-    exit 1
-  elif [[ -z $(file "$ISO" | grep "bootable") ]]
-  then
-    echo "ERROR: $ISO is not bootable" 1>&2
-    exit 1
+  if [[ ! -z $(grep $DEV /proc/mounts) ]]; then
+    error "ERROR: \"$DEV\" is mounted, unmount it and run bootify again"
   fi
 
   # Check $DEV capacity
+  if [[ $(stat -c %s "$ISO") -gt $(lsblk -ndbo size $DEV) ]]; then
+    error "ERROR: The device capacity is insufficient"
+  fi
 
-  if [[ $(stat -c %s "$ISO") -gt $(lsblk -ndbo size $DEV) ]]
-  then
-    echo "ERROR: The device capacity is insufficient" 1>&2
-    exit 1
+  # Check if $ISO file exists and is bootable
+  if [[ ! -f "$ISO" ]]; then
+    error "ERROR: \"$ISO\" does not exist"
+  elif [[ -z $(file "$ISO" | grep "bootable") ]]; then
+    error "ERROR: \"$ISO\" is not bootable"
+  fi
+
+  # Check if bootstrap file exists
+  if [[ ! -f mbr.bin && "$SCH" == "boot" ]]; then
+    error "ERROR: bootstrap file does not exist"
   fi
 }
 
-confirm()
-{
-  DSC=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
-  read -p "$DSC is going to be formated. Do you want to continue? (Y/N)" YN
-  if [[ "$YN" == [Yy] ]]
-  then
+confirm() {
+  device=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
+  read -p "$device is going to be formated! Do you want to continue? (Y/N)" YN
+  if [[ "$YN" == [Yy] ]]; then
     true
-  elif [[ "$YN" == [Nn] ]]
-  then
+  elif [[ "$YN" == [Nn] ]]; then
     exit 0
   else
     echo "Please, use 'Y' or 'N'"
@@ -131,52 +104,45 @@ confirm()
   fi
 }
 
-partitioning()
-{
-  if [[ "$SCH" == "boot" ]]
-  then
+partitioning() {
+  if [[ "$SCH" == "boot" ]]; then
     parted -s -a optimal $DEV mktable msdos mkpart primary ntfs 1 100% set 1 boot
     mkfs.ntfs -f -L BOOTIFY ${DEV}1
-    # dd if=/usr/lib/syslinux/bios/mbr.bin of=$DEV bs=446 count=1 conv=notrunc
-    dd if=mbr.bin of=$DEV bs=446 count=1 conv=notrunc > /dev/null 2>&1 || { echo "Error injecting bootstrap" 1>&2; exit 1; }
-  elif [[ "$SCH" == "uefi" ]]
-  then
+    dd if=mbr.bin of=$DEV bs=446 count=1 conv=notrunc > /dev/null 2>&1 ||
+      error "Error injecting bootstrap"
+  elif [[ "$SCH" == "uefi" ]]; then
     parted -s -a optimal $DEV mktable gpt mkpart primary fat32 1 100%
     mkfs.vfat -F32 -n BOOTIFY ${DEV}1
   else
-    echo "ERROR: Incorrect boot method, use 'boot' or 'uefi'" 1>&2
+    error "ERROR: Incorrect boot method, use 'boot' or 'uefi'"
     usage
     exit 1
   fi
 }
 
-copy_files()
-{
-  mkdir -p /tmp/{src,dst}
-  mount -o loop "$ISO" /tmp/src
-  mount ${DEV}1 /tmp/dst
-  rsync -r --info=progress2 /tmp/src/ /tmp/dst/
+copy_files() {
+  src_dev=$(mktemp -d /mnt/bootify.XXXXXXXXX)
+  dst_dev=$(mktemp -d /mnt/bootify.XXXXXXXXX)
+  mount -o ro,loop "$ISO" $src_dev
+  mount ${DEV}1 $dst_dev
+  rsync -r --info=progress2 $src_dev/ $dst_dev
 
   # Windows 7 missing UEFI boot file workaround
-
-  if [[ "$SCH" == "uefi" ]]
-  then
-    if [[ ! -d /tmp/src/efi/boot ]]
-    then
-      WIM="/tmp/src/sources/install.wim"
-      EFI="1/Windows/Boot/EFI/bootmgfw.efi"
-      DST="/tmp/dst/efi/boot"   
-      7z e $WIM $EFI -o${DST} > /dev/null 2>&1 || { echo 1>&2 "Error extracting bootmgfw.efi"; exit 1; }
-      mv ${DST}/bootmgfw.efi ${DST}/bootx64.efi
+  if [[ "$SCH" == "uefi" ]]; then
+    if [[ ! -d $src_dev/efi/boot ]]; then
+      wim_file="$src_dev/sources/install.wim"
+      efi_file="1/Windows/Boot/EFI/bootmgfw.efi"
+      boot_dir="$dst_dev/efi/boot"
+      7z e $wim_file $efi_file -o${boot_dir} > /dev/null 2>&1 ||
+        error "Error extracting bootmgfw.efi"
+      mv ${boot_dir}/bootmgfw.efi ${boot_dir}/bootx64.efi
     fi
   fi
 
   sync
-}
 
-finish()
-{
-  umount /tmp/{src,dst}
+  umount $src_dev $dst_dev
+
   echo "Your USB drive has been bootified!"
 }
 
@@ -185,10 +151,6 @@ do
   case $OPT in
     h)
       usage
-      exit 0
-      ;;
-    v)
-      version
       exit 0
       ;;
     l)
@@ -221,4 +183,5 @@ checks
 confirm
 partitioning
 copy_files
-finish
+
+exit 0
