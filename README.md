@@ -7,11 +7,11 @@ installation files. It can be used for Boot or UEFI systems.
 
 Make sure the following tools exist on your system:
 
-`stat`, `file`, `lsblk`, `dd`, `mkfs.ntfs`, `mkfs.vfat`, `parted`, `7z`, `rsync`
+`stat`, `file`, `mktemp`, `lsblk`, `dd`, `mkfs.ntfs`, `mkfs.vfat`, `parted`, `7z`, `rsync`
 
 ## Usage
 
-Make sure `bootify.sh` is executable: `chmod +x bootify.sh`
+Make sure `bootify` is executable: `chmod +x bootify`
 
 `sudo ./bootify.sh -d [DEVICE] -s [boot|uefi] -i [ISO]`
 
