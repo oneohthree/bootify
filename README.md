@@ -13,7 +13,7 @@ Make sure the following tools exist on your system:
 
 Make sure `bootify` is executable: `chmod +x bootify`
 
-`sudo ./bootify.sh -d [DEVICE] -s [boot|uefi] -i [ISO]`
+`sudo ./bootify -d [DEVICE] -s [boot|uefi] -i [ISO]`
 
 ## Todo
 
