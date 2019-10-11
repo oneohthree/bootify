@@ -2,7 +2,7 @@
 #
 # Make bootable USB drives with Windows 7/8/8.1/10 installation files
 #
-# Copyright (C) 2015-2018 oneohthree
+# Copyright (C) 2015-2019 oneohthree
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-VER="0.3"
+VER="0.3.1"
 
 usage() {
   cat <<-EOF
@@ -55,7 +55,7 @@ checks() {
   fi
 
   # We need these tools
-  tools="dd file stat mktemp lsblk parted mkfs.ntfs mkfs.vfat 7z rsync"
+  tools="dd file stat mktemp lsblk parted mkfs.ntfs mkfs.vfat 7z wimlib-imagex rsync"
   for tool in $tools; do
     type "$tool" > /dev/null 2>&1 || error "ERROR: '$tool' is missing"
   done
@@ -120,12 +120,19 @@ copy_files() {
   dst_dev=$(mktemp -d /tmp/bootify.XXXXXXXXX)
   mount -o ro,loop "$ISO" $src_dev
   mount ${DEV}1 $dst_dev
-  rsync -r --info=progress2 $src_dev/ $dst_dev
+  wim_file="$src_dev/sources/install.wim"
+  wim_file_size=$(stat -c%s "$wim_file")
+
+  if [[ "$wim_file_size" -gt "4294967296" ]]; then
+    wimlib-imagex split "$wimFile" "$dst_dev/sources/install.swm" 1024
+    rsync --recursive --exclude "$wim_file" --info=progress2 $src_dev/ $dst_dev
+  else
+    rsync --recursive --info=progress2 $src_dev/ $dst_dev  
+  fi
 
   # Windows 7 missing UEFI boot file workaround
   if [[ "$SCH" == "uefi" ]]; then
     if [[ ! -d $src_dev/efi/boot ]]; then
-      wim_file="$src_dev/sources/install.wim"
       efi_file="1/Windows/Boot/EFI/bootmgfw.efi"
       boot_dir="$dst_dev/efi/boot"
       7z e $wim_file $efi_file -o${boot_dir} > /dev/null 2>&1 ||
