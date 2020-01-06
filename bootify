@@ -124,7 +124,7 @@ copy_files() {
   wim_file_size=$(stat -c%s "$wim_file")
 
   if [[ "$wim_file_size" -gt "4294967296" ]]; then
-    wimlib-imagex split "$wimFile" "$dst_dev/sources/install.swm" 1024
+    wimlib-imagex split "$wim_file" "$dst_dev/sources/install.swm" 1024
     rsync --recursive --exclude "$wim_file" --info=progress2 $src_dev/ $dst_dev
   else
     rsync --recursive --info=progress2 $src_dev/ $dst_dev  
