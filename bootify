@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-VER="0.3.1"
+#
+# Version 0.3.1
 
 usage() {
   cat <<-EOF
@@ -65,15 +65,15 @@ checks() {
     error "ERROR: '$DEV' is not a block device"
   fi
 
-  if [[ -z $(lsblk -ndo tran $DEV | grep usb) ]]; then
+  if [[ -z $(lsblk -ndo tran "$DEV" | grep usb) ]]; then
     error "ERROR: '$DEV' is not a USB device"
   fi
 
-  if [[ ! -z $(grep $DEV /proc/mounts) ]]; then
+  if [[ ! -z $(grep "$DEV" /proc/mounts) ]]; then
     error "ERROR: '$DEV' is mounted, unmount it and run bootify again"
   fi
 
-  if [[ $(stat -c %s "$ISO") -gt $(lsblk -ndbo size $DEV) ]]; then
+  if [[ $(stat -c %s "$ISO") -gt $(lsblk -ndbo size "$DEV") ]]; then
     error "ERROR: The device capacity is insufficient"
   fi
 
@@ -87,7 +87,7 @@ checks() {
 
 # Ask user to be sure
 confirm() {
-  device=$(lsblk -ndo vendor,model,size $DEV | tr -s " " " ")
+  device=$(lsblk -ndo vendor,model,size "$DEV" | tr -s " " " ")
   read -p "$device is going to be formated! Do you want to continue? (Y/N)" YN
   if [[ "$YN" == [Yy] ]]; then
     true
@@ -150,7 +150,7 @@ copy_files() {
   echo "Your USB drive has been bootified!"
 }
 
-while getopts ":hlvd:s:i:" OPT
+while getopts ":hld:s:i:" OPT
 do
   case $OPT in
     h)
