@@ -107,6 +107,7 @@ partitioning() {
     dd if=/tmp/mbr.bin of=$DEV > /dev/null 2>&1 || error "Error writing mbr"
   elif [[ "$SCH" == "uefi" ]]; then
     parted -s -a optimal $DEV mklabel gpt mkpart primary fat32 1 100%
+    partprobe
     mkfs.vfat -F32 -n BOOTIFY ${DEV}1
   else
     error "ERROR: Incorrect boot method, use 'boot' or 'uefi'"
@@ -124,11 +125,12 @@ copy_files() {
   wim_file_size=$(stat -c%s "$wim_file")
 
   if [[ "$wim_file_size" -gt "4294967296" && "$SCH" == "uefi" ]]; then
+    mkdir -p "$dst_dev/sources"
     wimlib-imagex split "$wim_file" "$dst_dev/sources/install.swm" 1024
     rsync --recursive --exclude sources/install.wim \
           --info=progress2 $src_dev/ $dst_dev
   else
-    rsync --recursive --info=progress2 $src_dev/ $dst_dev  
+    rsync --recursive --info=progress2 $src_dev/ $dst_dev
   fi
 
   # Windows 7 missing UEFI boot file workaround
